@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { CourtsClient } from "./CourtsClient";
 import { notFound } from "next/navigation";
 import { Tenant, PlanType, Court, CourtType } from "@/types";
-import { Court as DBCourt } from "@prisma/client";
 
 function mapPlanType(plan: string): PlanType {
   if (plan === "PRO") return "profissional";
@@ -58,7 +57,7 @@ export default async function AdminCourtsPage({ params }: PageProps) {
     address: undefined,
   };
 
-  const courts: Court[] = dbCourts.map((c: DBCourt) => ({
+  const courts: Court[] = dbCourts.map((c: typeof dbCourts[number]) => ({
     id: c.id,
     tenantId: c.companyId,
     name: c.name,

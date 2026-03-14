@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { Booking, Court, CourtType, BookingStatus } from "@/types";
 import { notFound } from "next/navigation";
 import { BookingCalendar } from "@/components/admin/BookingCalendar";
-import { Prisma } from "@prisma/client";
 
 // Helper to map DB Court Type to Frontend Court Type
 function mapCourtType(dbType: string): CourtType {
@@ -39,10 +38,6 @@ interface PageProps {
   params: Promise<{ tenantSlug: string }>;
 }
 
-type ReservationWithCustomer = Prisma.ReservationGetPayload<{
-  include: { customer: true };
-}>;
-
 export default async function BookingsPage({ params }: PageProps) {
   const { tenantSlug } = await params;
 
@@ -60,7 +55,7 @@ export default async function BookingsPage({ params }: PageProps) {
     where: { companyId: company.id },
   });
 
-  const courts: Court[] = dbCourts.map((c: Prisma.CourtGetPayload<{}>) => ({
+  const courts: Court[] = dbCourts.map((c: typeof dbCourts[number]) => ({
     id: c.id,
     tenantId: c.companyId,
     name: c.name,
@@ -79,7 +74,7 @@ export default async function BookingsPage({ params }: PageProps) {
     orderBy: { startAt: "desc" },
   });
 
-  const bookings: Booking[] = dbReservations.map((r: ReservationWithCustomer) => ({
+  const bookings: Booking[] = dbReservations.map((r: typeof dbReservations[number]) => ({
     id: r.id,
     courtId: r.courtId,
     startTime: r.startAt.toISOString(),

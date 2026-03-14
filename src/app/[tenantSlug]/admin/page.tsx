@@ -24,15 +24,10 @@ import {
   isWithinInterval,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Prisma } from "@prisma/client";
 
 interface PageProps {
   params: Promise<{ tenantSlug: string }>;
 }
-
-type ReservationWithDetails = Prisma.ReservationGetPayload<{
-  include: { customer: true; court: true };
-}>;
 
 export default async function AdminDashboardPage({ params }: PageProps) {
   const { tenantSlug } = await params;
@@ -278,7 +273,7 @@ export default async function AdminDashboardPage({ params }: PageProps) {
           <CardContent className="p-6">
             {todayReservations.length > 0 ? (
               <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                {todayReservations.map((res: ReservationWithDetails) => {
+                {todayReservations.map((res: typeof todayReservations[number]) => {
                   const isActive = isCurrentlyActive(res.startAt, res.endAt);
                   const isCompleted = isPast(res.endAt);
 
@@ -378,7 +373,7 @@ export default async function AdminDashboardPage({ params }: PageProps) {
           <CardContent className="p-0">
             <div className="divide-y divide-white/5 max-h-[500px] overflow-y-auto">
               {upcomingReservations.length > 0 ? (
-                upcomingReservations.map((res: ReservationWithDetails) => (
+                upcomingReservations.map((res: typeof upcomingReservations[number]) => (
                   <div
                     key={res.id}
                     className="p-4 hover:bg-white/[0.02] transition-colors"
