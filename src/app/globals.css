@@ -1,26 +1,140 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+html {
+  scroll-behavior: smooth;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--neutral-900);
+  --color-foreground: var(--neutral-50);
+
+  /* AntiGravity Colors - Dark & Neon Edition */
+  --color-primary-900: #000000;
+  --color-primary-800: #111111;
+  --color-primary-700: #1a1a1a;
+  --color-primary-600: #262626;
+  --color-primary-500: #404040;
+
+  /* Fluorescent Green Accent */
+  --color-accent-600: #a3d900;
+  --color-accent-500: #ccff00;
+  /* Main Neon Green */
+  --color-accent-400: #d9ff33;
+
+  --color-secondary-600: #7C3AED;
+  --color-secondary-500: #8B5CF6;
+  --color-secondary-400: #A78BFA;
+
+  --color-success-500: #10B981;
+  --color-warning-500: #F59E0B;
+  --color-danger-500: #EF4444;
+
+  --color-neutral-50: #ffffff;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-600: #a3a3a3;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #0a0a0a;
+  /* Deep black/zinc background */
+
+  /* Semantic Mapping */
+  --color-card: rgba(24, 24, 27, 0.6);
+  /* Zinc 900 with opacity */
+  --color-card-foreground: var(--neutral-200);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-rajdhani), ui-monospace, SFMono-Regular, monospace;
+
+  /* Animation */
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
+  --animate-slide-in: slide-in 0.5s ease-out;
 }
 
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --neutral-50: #0a0a0a;
+    /* Inverted for Dark Mode baseline */
+    --neutral-100: #171717;
+    --neutral-200: #262626;
+    --neutral-600: #a1a1aa;
+    --neutral-800: #fafafa;
+    --neutral-900: #ffffff;
+  }
+
+  * {
+    border-color: var(--neutral-200);
+  }
+
+  body {
+    background: #050505;
+    /* Pure dark background */
+    color: #ffffff;
+    min-height: 100vh;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Custom Animations from AntiGravity System */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(204, 255, 0, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 30px rgba(204, 255, 0, 0.4);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Utility Classes matching AntiGravity */
+@utility ag-card {
+  @apply bg-neutral-100/40 backdrop-blur-md rounded-3xl p-8 relative overflow-hidden transition-all duration-300 border border-white/5;
+  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.5);
+}
+
+@utility ag-card-hover {
+  @apply hover:-translate-y-2;
+
+  &:hover {
+    box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(204, 255, 0, 0.3) inset;
+    border-color: rgba(204, 255, 0, 0.2);
+  }
+}
+
+@utility ag-gradient-text {
+  @apply bg-gradient-to-r from-accent-500 to-white bg-clip-text text-transparent;
+}
+
+@utility ag-input {
+  @apply w-full px-5 py-4 text-base bg-neutral-100/50 backdrop-blur-sm border-2 border-white/10 rounded-2xl outline-none transition-all duration-300 text-white placeholder-neutral-600;
+
+  &:focus {
+    @apply border-accent-500 bg-neutral-100;
+    box-shadow: 0 0 30px -10px rgba(204, 255, 0, 0.3);
+  }
 }
