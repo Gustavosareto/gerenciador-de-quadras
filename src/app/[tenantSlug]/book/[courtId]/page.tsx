@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import PublicBookingFlow from "@/components/booking/PublicBookingFlow";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import { Court, CourtType } from "@/types";
 
 interface PageProps {
   params: Promise<{ tenantSlug: string; courtId: string }>;
@@ -49,10 +50,10 @@ export default async function BookingPage({ params }: PageProps) {
   if (!requestedCourt) return notFound();
 
   // 4. Map to Component Props
-  const courts = dbCourts.map((c) => ({
+  const courts: Court[] = dbCourts.map((c) => ({
     id: c.id,
     name: c.name,
-    type: c.type,
+    type: c.type.toLowerCase() as CourtType,
     hourlyRate: Number(c.hourlyRate),
     reservationType: ((c as any).reservationType === "OPEN"
       ? "OPEN"
@@ -69,12 +70,13 @@ export default async function BookingPage({ params }: PageProps) {
     slug: company.slug || tenantSlug,
     logo: company.logo || undefined,
     address: company.address || undefined,
+    plan: (company.planType?.toLowerCase() as any) || 'essencial',
   };
 
   return (
     <PublicBookingFlow
-      tenant={tenant}
-      courts={courts} // Although we are in a specific court page, passing all allows the component to know about others if needed, though strictly we might just need the one. PublicBookingFlow expects array.
+      tenant={tenant as any}
+      courts={courts}
       tenantSlug={tenantSlug}
       initialCourtId={courtId}
     />

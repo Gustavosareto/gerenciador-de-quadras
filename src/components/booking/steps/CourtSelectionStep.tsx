@@ -4,22 +4,7 @@ import { Trophy, Clock, MapPin, Users, Maximize2, Layers, Image as ImageIcon } f
 import { formatCurrency } from '@/lib/utils';
 import { useState } from 'react';
 import { CourtImageCarousel } from '@/components/CourtImageCarousel';
-
-interface Court {
-    id: string;
-    name: string;
-    type: string;
-    hourlyRate: number;
-    reservationType: 'FIXED' | 'OPEN';
-    image?: string;
-    images?: string[];
-    useCompanyAddress?: boolean;
-    customAddress?: string;
-    minPlayers?: number;
-    maxPlayers?: number;
-    surface?: string;
-    dimensions?: string;
-}
+import { Court } from '@/types';
 
 interface CourtSelectionStepProps {
     courts: Court[];
