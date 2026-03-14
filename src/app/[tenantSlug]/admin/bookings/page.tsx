@@ -55,7 +55,7 @@ export default async function BookingsPage({ params }: PageProps) {
     where: { companyId: company.id },
   });
 
-  const courts: Court[] = dbCourts.map((c) => ({
+  const courts: Court[] = dbCourts.map((c: any) => ({
     id: c.id,
     tenantId: c.companyId,
     name: c.name,
@@ -74,7 +74,7 @@ export default async function BookingsPage({ params }: PageProps) {
     orderBy: { startAt: "desc" },
   });
 
-  const bookings: Booking[] = dbReservations.map((r) => ({
+  const bookings: Booking[] = dbReservations.map((r: any) => ({
     id: r.id,
     courtId: r.courtId,
     startTime: r.startAt.toISOString(),
