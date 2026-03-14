@@ -2,7 +2,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { Prisma } from "@prisma/client";
 import { createClient } from "@/lib/supabase-server";
 import { NotificationService } from "@/modules/notifications/services/notification.service";
 
@@ -273,7 +272,7 @@ export async function createBookingAction(tenantSlug: string, bookingData: any) 
                     customerId: customerId,
                     startAt,
                     endAt,
-                    totalPrice: new Prisma.Decimal(bookingData.totalAmount || 0),
+                    totalPrice: Number(bookingData.totalAmount || 0),
                     status: 'CONFIRMED'
                 }
             });
@@ -309,7 +308,7 @@ export async function endReservationAction(tenantSlug: string, reservationId: st
             data: {
                 endAt: now,
                 status: 'COMPLETED',
-                totalPrice: new Prisma.Decimal(totalPrice)
+                totalPrice: Number(totalPrice)
             }
         });
 
