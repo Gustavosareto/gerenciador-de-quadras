@@ -25,7 +25,7 @@ export default async function FinancePage({ params }: PageProps) {
   });
 
   // Map DB entries to FinanceClient Transaction format
-  const transactions = ledgerEntries.map((entry) => ({
+  const transactions = (ledgerEntries as any[]).map((entry: any) => ({
     id: entry.id,
     description:
       entry.description ||
@@ -46,11 +46,11 @@ export default async function FinancePage({ params }: PageProps) {
   // Calculate totals
   const totalBalance = Number(company.balanceAvailable);
   const totalIncome = transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .filter((t: any) => t.type === "income")
+    .reduce((sum: number, t: any) => sum + t.amount, 0);
   const totalExpense = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .filter((t: any) => t.type === "expense")
+    .reduce((sum: number, t: any) => sum + t.amount, 0);
 
   // Placeholder growth
   const monthGrowth = 0;
