@@ -65,6 +65,7 @@ model Company {
   payouts              Payout[]
   reservations         Reservation[]
 
+  @@index([ownerId])
   @@map("companies")
   @@schema("public")
 }
@@ -142,6 +143,8 @@ model Payment {
   company            Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   reservation        Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
 
+  @@index([providerChargeId])
+  @@index([reservationId])
   @@map("payments")
   @@schema("public")
 }
@@ -176,6 +179,8 @@ model LedgerEntry {
   payment       Payment?  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   payout        Payout?   @relation(fields: [payoutId], references: [id], onDelete: Cascade)
 
+  @@index([companyId])
+  @@index([paymentId])
   @@map("ledger_entries")
   @@schema("public")
 }

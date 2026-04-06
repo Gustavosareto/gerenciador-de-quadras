@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
+import { inngest } from '@/lib/inngest/client';
 
 export async function POST(req: Request) {
     const body = await req.text();
@@ -23,45 +24,17 @@ export async function POST(req: Request) {
 
     const session = event.data.object as Stripe.Checkout.Session;
 
-    // Handle the event
-    switch (event.type) {
-        case 'checkout.session.completed':
-            // Quando um checkout é finalizado com sucesso
-            const tenantSlug = session.metadata?.tenantSlug;
-            const userId = session.metadata?.userId;
+    // Enviar para a Inngest de forma assíncrona
+    await inngest.send({
+        name: "stripe/webhook.received",
+        id: event.id, // Garante que o Inngest recuse envios duplicados deste exato webhook
+        data: {
+            type: event.type,
+            session: session,
+            subscription: event.type === 'customer.subscription.deleted' ? event.data.object : undefined,
+        },
+    });
 
-            if (tenantSlug) {
-                await prisma.company.update({
-                    where: { slug: tenantSlug },
-                    data: {
-                        planType: 'PROFISSIONAL',
-                        stripeCustomerId: session.customer as string,
-                        stripeSubscriptionId: session.subscription as string,
-                    },
-                });
-                console.log(`Plan upgraded for tenant: ${tenantSlug}`);
-            }
-            break;
-
-        case 'customer.subscription.deleted':
-            // Quando a assinatura é cancelada ou expira
-            const subscription = event.data.object as Stripe.Subscription;
-            const slug = subscription.metadata?.tenantSlug;
-
-            if (slug) {
-                await prisma.company.update({
-                    where: { slug },
-                    data: {
-                        planType: 'FREE',
-                    },
-                });
-                console.log(`Plan downgraded for tenant: ${slug}`);
-            }
-            break;
-
-        default:
-            console.log(`Unhandled event type ${event.type}`);
-    }
-
+    console.log(`[Stripe Webhook] Evento ${event.type} enfileirado no Inngest com sucesso.`);
     return NextResponse.json({ received: true });
 }

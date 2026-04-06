@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { PaymentService, AbacatePayGateway } from '@/modules/payments/services/payment.service';
 
 /**
@@ -32,9 +32,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Empresa não encontrada' }, { status: 404 });
     }
 
-    // Nota: Aqui você buscaria o preço da quadra na sua tabela de quadras
-    // Como estamos no MVP, vamos assumir um preço fixo vindo da request ou mock
-    const courtPrice = 80.00; 
+    const { data: court, error: courtErr } = await supabase
+      .from('courts')
+      .select('hourly_rate, is_active')
+      .eq('id', courtId)
+      .single();
+
+    if (courtErr || !court) {
+      return NextResponse.json({ error: 'Quadra não encontrada' }, { status: 404 });
+    }
+
+    if (!court.is_active) {
+      return NextResponse.json({ error: 'Quadra inativa e indisponível para reservas' }, { status: 400 });
+    }
+
+    // Calcula duração em horas para precificação dinâmica (o front geralmente manda, mas o back deve revalidar)
+    const durationInMs = new Date(endAt).getTime() - new Date(startAt).getTime();
+    const durationInHours = durationInMs / (1000 * 60 * 60);
+
+    if (durationInHours <= 0) {
+      return NextResponse.json({ error: 'Duração da reserva inválida' }, { status: 400 });
+    }
+
+    const courtPrice = Number(court.hourly_rate) * durationInHours;
 
     // 2. Inicializar Serviços de Pagamento
     const gateway = new AbacatePayGateway();

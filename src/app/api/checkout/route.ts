@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient } from '@/lib/supabase-server';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(req: Request) {
     try {
@@ -15,16 +16,20 @@ export async function POST(req: Request) {
 
         let targetUser = { id: userId, email: userEmail };
 
-        // Se não foi passado userId manualmente (fluxo normal), verifica sessão
-        if (!userId) {
-            const supabase = await createClient();
-            const { data: { user }, error: authError } = await supabase.auth.getUser();
+        // 🟢 Segurança: Garantir que quem está assinando é um usuário logado e dono da empresa
+        const supabase = await createClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-            if (authError || !user) {
-                return NextResponse.json({ error: 'Você precisa estar logado para assinar um plano.' }, { status: 401 });
-            }
-            targetUser = { id: user.id, email: user.email };
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Você precisa estar logado para assinar um plano.' }, { status: 401 });
         }
+
+        const company = await prisma.company.findUnique({ where: { slug: tenantSlug } });
+        if (!company || company.ownerId !== user.id) {
+            return NextResponse.json({ error: 'Acesso negado: Você não tem permissão para assinar planos nesta empresa.' }, { status: 403 });
+        }
+
+        targetUser = { id: user.id, email: user.email as string };
 
         const origin = req.headers.get('origin');
 

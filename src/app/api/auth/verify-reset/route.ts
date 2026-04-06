@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(req: NextRequest) {
     try {
@@ -43,40 +38,18 @@ export async function POST(req: NextRequest) {
         console.log('Token encontrado:', token ? 'Sim' : 'Não');
 
         if (!token) {
-            // Debug: buscar todos os tokens deste email para entender o problema
-            const allTokens = await prisma.passwordResetToken.findMany({
-                where: { email: email.toLowerCase() },
-                orderBy: { createdAt: 'desc' },
-                take: 5
-            });
-            console.log('Todos os tokens para este email:', allTokens.map(t => ({
-                code: t.code,
-                expiresAt: t.expiresAt,
-                usedAt: t.usedAt,
-                expired: t.expiresAt < new Date()
-            })));
-            
+            console.log('Tentativa de reset de senha com código inválido para o e-mail informado.');
             return NextResponse.json(
                 { error: 'Código inválido ou expirado' },
                 { status: 400 }
             );
         }
 
-        // Buscar usuário no Supabase
-        console.log('Buscando usuário no Supabase...');
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-        
-        if (authError) {
-            console.error('Erro ao buscar usuários:', authError);
-            return NextResponse.json(
-                { error: 'Erro ao verificar usuário' },
-                { status: 500 }
-            );
-        }
-
-        const user = authData.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-
-        console.log('Usuário encontrado:', user ? user.id : 'Não');
+        // Buscar usuário no banco de forma otimizada
+        console.log('Buscando usuário...');
+        const user = await prisma.users.findFirst({
+            where: { email: email.toLowerCase() }
+        });
 
         if (!user) {
             return NextResponse.json(
@@ -87,6 +60,7 @@ export async function POST(req: NextRequest) {
 
         // Atualizar senha no Supabase
         console.log('Atualizando senha...');
+        const supabaseAdmin = getSupabaseAdmin();
         const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
             user.id,
             { password: newPassword }

@@ -2,12 +2,22 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+
+import { createClient } from "@/lib/supabase-server";
 
 export async function updateTenantSettings(tenantSlug: string, data: any) {
     try {
+        const supabaseAuth = await createClient();
+        const { data: { user } } = await supabaseAuth.auth.getUser();
+        if (!user) return { success: false, error: "Não autorizado" };
+
         const company = await prisma.company.findUnique({ where: { slug: tenantSlug } });
         if (!company) return { success: false, error: "Tenant not found" };
+
+        if (company.ownerId !== user.id) {
+            return { success: false, error: "Acesso negado." };
+        }
 
         const { name, address, addressStreet, addressCep, addressNumber, addressCity, addressState, phone, whatsapp, email, instagram, openTime, closeTime } = data;
 
@@ -50,6 +60,10 @@ export async function updateTenantSettings(tenantSlug: string, data: any) {
 
 export async function updatePassword(tenantSlug: string, currentPassword: string, newPassword: string) {
     try {
+        const supabaseAuth = await createClient();
+        const { data: { user } } = await supabaseAuth.auth.getUser();
+        if (!user) return { success: false, error: "Não autorizado" };
+
         // Get company to find owner
         const company = await prisma.company.findUnique({
             where: { slug: tenantSlug },
@@ -58,6 +72,10 @@ export async function updatePassword(tenantSlug: string, currentPassword: string
 
         if (!company || !company.users) {
             return { success: false, error: "Conta não encontrada" };
+        }
+
+        if (company.ownerId !== user.id) {
+            return { success: false, error: "Acesso negado." };
         }
 
         const userEmail = company.users.email;

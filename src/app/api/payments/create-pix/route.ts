@@ -198,6 +198,7 @@ export async function POST(request: NextRequest) {
                             endAt: endAt,
                             status: 'PENDING_PAYMENT',
                             totalPrice: body.amount,
+                            holdExpiresAt: new Date(Date.now() + 15 * 60 * 1000) // Expira em 15 minutos
                         }
                     });
                     reservationId = reservation.id;

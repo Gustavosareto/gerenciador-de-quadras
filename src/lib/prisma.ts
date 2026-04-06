@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-// Forced reload to pick up new schema changes
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 
@@ -7,7 +6,14 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 const connectionString = process.env.DATABASE_URL!;
 
-const pool = new Pool({ connectionString });
+// PrismaPg + 'pg' no Next.js (Serverless) precisa de atenção com o max connections por instância
+const pool = new Pool({ 
+  connectionString,
+  max: 5, // Cada container no Vercel terá no máximo 5 abertas, contando com o PgBouncer pra segurar
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+});
+
 const adapter = new PrismaPg(pool);
 
 export const prisma =

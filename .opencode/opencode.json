@@ -1,0 +1,10 @@
+{
+  "permission": {
+    "read": {
+      "C:/Users/gusta/OneDrive/Documentos/gerenciador-de-quadras/.opencode/get-shit-done/*": "allow"
+    },
+    "external_directory": {
+      "C:/Users/gusta/OneDrive/Documentos/gerenciador-de-quadras/.opencode/get-shit-done/*": "allow"
+    }
+  }
+}

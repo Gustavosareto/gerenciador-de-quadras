@@ -71,7 +71,13 @@ export default async function TenantHome({ params }: PageProps) {
   const dbCourts = await prisma.court.findMany({
     where: courtsWhereInput,
     include: {
-      company: true,
+      company: {
+        select: {
+          name: true,
+          slug: true,
+          address: true
+        }
+      }
     },
   });
 

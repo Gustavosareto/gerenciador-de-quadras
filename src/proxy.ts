@@ -1,16 +1,72 @@
-import { type NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
 
-async function proxy(request: NextRequest) {
+const redisHost = process.env.UPSTASH_REDIS_REST_URL;
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+const redis = redisHost && redisToken ? Redis.fromEnv() : null;
+
+const strictRateLimit = redis ? new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '1 m'),
+  analytics: true,
+  prefix: '@upstash/ratelimit/strict'
+}) : null;
+
+const standardRateLimit = redis ? new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(30, '10 s'),
+  analytics: true,
+  prefix: '@upstash/ratelimit/standard'
+}) : null;
+
+export async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  /* --- 1. RATE LIMITING --- */
+  if (path.startsWith('/api') && redis && strictRateLimit && standardRateLimit) {
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '127.0.0.1';
+    let limitResult;
+
+    if (path.startsWith('/api/auth') || path.startsWith('/api/checkout')) {
+      limitResult = await strictRateLimit.limit(`strict_${ip}`);
+    } else if (path.startsWith('/api/payments/webhook') || path.startsWith('/api/webhook/stripe')) {
+      limitResult = await standardRateLimit.limit(`standard_${ip}`);
+    }
+
+    if (limitResult && !limitResult.success) {
+      console.warn(`🛑 [Rate Limiting] Bloqueando IP ${ip} em ${path}`);
+      return NextResponse.json(
+        { error: 'Você fez muitas requisições. Rate Limiting Edge Acionado. Tente novamente em alguns segundos.' },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': limitResult.limit.toString(),
+            'X-RateLimit-Remaining': limitResult.remaining.toString(),
+            'X-RateLimit-Reset': limitResult.reset.toString(),
+          }
+        }
+      );
+    }
+  }
+
+  /* --- 2. SUPABASE AUTH & TENANT ROUTING --- */
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) return response;
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
@@ -33,20 +89,15 @@ async function proxy(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
+  
   // ROTA PROTEGIDA: /:slug/admin
-  // Verifica se a URL corresponde ao padrão /algo/admin
-  const path = request.nextUrl.pathname;
   const adminRegex = /^\/([^/]+)\/admin(\/.*)?$/;
   const match = path.match(adminRegex);
 
   if (match) {
     const tenantSlug = match[1];
 
-    // 1. Verificar se está logado
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
@@ -54,16 +105,9 @@ async function proxy(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // 2. Verificar se o usuário pertence a este tenant
-    // (Otimização: Verificar metadados do usuário para evitar query no banco se possível)
     const userCompanySlug = user.user_metadata?.company_slug;
 
-    // Se tiver o slug nos metadados e for diferente da URL, bloqueia
-    // Nota: Se o usuário tiver múltiplas empresas, essa lógica simples precisa ser aprimorada
-    // para verificar uma lista de slugs ou consultar o banco.
-    // Por enquanto, assumimos 1 usuário = 1 empresa principal.
     if (userCompanySlug && userCompanySlug !== tenantSlug) {
-      // Redireciona para o admin da empresa correta dele
       const url = request.nextUrl.clone();
       url.pathname = `/${userCompanySlug}/admin`;
       return NextResponse.redirect(url);
@@ -73,18 +117,8 @@ async function proxy(request: NextRequest) {
   return response;
 }
 
-export default proxy;
-
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - api/ (API routes - handled separately or protected properly)
-     * - login, register, etc (public auth routes)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|api/|login|register|forgot-password|reset-password).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
   ],
 };

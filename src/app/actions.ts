@@ -195,8 +195,17 @@ export async function deleteCourtAction(tenantSlug: string, courtId: string) {
 }
 
 export async function createBookingAction(tenantSlug: string, bookingData: any) {
+    // 1. Auth & Ownership Check
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Unauthorized" };
+
     const company = await prisma.company.findUnique({ where: { slug: tenantSlug } });
     if (!company) return { success: false, error: "Tenant not found" };
+
+    if (company.ownerId !== user.id) {
+        return { success: false, error: "Unauthorized: You do not own this company" };
+    }
 
     try {
         const startAt = new Date(bookingData.startTime);
@@ -287,6 +296,14 @@ export async function createBookingAction(tenantSlug: string, bookingData: any) 
 }
 
 export async function endReservationAction(tenantSlug: string, reservationId: string) {
+    // 1. Auth & Ownership Check
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Unauthorized" };
+
+    const company = await prisma.company.findUnique({ where: { slug: tenantSlug } });
+    if (!company || company.ownerId !== user.id) return { success: false, error: "Unauthorized" };
+
     try {
         const now = new Date();
         const reservation = await prisma.reservation.findUnique({
@@ -294,7 +311,7 @@ export async function endReservationAction(tenantSlug: string, reservationId: st
             include: { court: true }
         });
 
-        if (!reservation) return { success: false, error: "Reserva não encontrada" };
+        if (!reservation || reservation.companyId !== company.id) return { success: false, error: "Reserva não encontrada" };
 
         let totalPrice = Number(reservation.totalPrice);
         if ((reservation.court as any).reservationType === 'OPEN') {
